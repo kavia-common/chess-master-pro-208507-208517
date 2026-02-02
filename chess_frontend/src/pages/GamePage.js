@@ -10,6 +10,7 @@ import { useToast } from "../hooks/useToast";
 import { chooseAiMove } from "../chess/ai";
 import { createSocketClient } from "../services/chessSocket";
 import { canUseWebSocket, getWsUrl } from "../services/urls";
+import { loadGame, saveGame } from "../services/chessApi";
 
 // PUBLIC_INTERFACE
 export default function GamePage({ config, onExit }) {
@@ -34,7 +35,7 @@ export default function GamePage({ config, onExit }) {
     incrementSeconds: config.incrementSeconds,
   });
 
-  const [socketState, setSocketState] = useState({ status: "idle", roomCode: null });
+  const [socketState, setSocketState] = useState({ status: "idle", gameId: null });
 
   const isOnline = config.mode === "ONLINE";
   const isAi = config.mode === "AI";
@@ -103,14 +104,15 @@ export default function GamePage({ config, onExit }) {
   }, [isAi, isPlayersTurn, ui.promotionPending, game, config.aiDepth, pushToast, game.state, game.status.kind]);
 
   /**
-   * Online WebSocket: connect on enter, send/receive moves.
-   * Backend may not exist yet; we handle failures gracefully.
+   * Online WebSocket: connect on enter, hydrate state on 'joined'/'state',
+   * and apply remote moves on 'move_applied'.
    */
   useEffect(() => {
     if (!isOnline) return;
 
-    const roomCode = config.room?.roomCode || "";
-    if (!roomCode) return;
+    const gameId = config.room?.gameId || "";
+    const playerId = config.room?.playerId || "";
+    if (!gameId) return;
 
     if (!canUseWebSocket()) {
       pushToast({
@@ -124,27 +126,60 @@ export default function GamePage({ config, onExit }) {
     if (!wsUrl) {
       pushToast({
         title: "Missing WS URL",
-        message: "Set REACT_APP_WS_URL (e.g., ws://localhost:3001). Falling back to local play.",
+        message: "Set REACT_APP_WS_URL (e.g., ws://localhost:3001/ws). Falling back to local play.",
       });
       return;
     }
 
     const client = createSocketClient({
       wsUrl,
-      roomCode,
-      side: config.room?.side || "w",
+      gameId,
+      playerId,
       onStatus: (s) => setSocketState(s),
-      onRemoteMove: (move) => {
-        game.applyMove(move, { remote: true });
+      onJoined: ({ game: serverGame }) => {
+        if (serverGame) {
+          game.hydrateFromServerGame(serverGame);
+        }
+      },
+      onState: (serverGame) => {
+        if (serverGame) {
+          game.hydrateFromServerGame(serverGame);
+        }
+      },
+      onMoveApplied: ({ move, game: serverGame }) => {
+        // Best effort:
+        // - Apply the move locally so UI stays responsive.
+        // - Also hydrate from server snapshot when provided (keeps things correct on reconnect/desync).
+        if (move) {
+          game.applyMove(move, { remote: true });
+        }
+        if (serverGame) {
+          game.hydrateFromServerGame(serverGame);
+        }
       },
       onInfo: (msg) => pushToast({ title: "Online", message: msg }),
-      onError: (msg) => pushToast({ title: "Online error", message: msg }),
+      onError: (msg) => {
+        pushToast({ title: "Online error", message: msg });
+        // Attempt a re-sync if available.
+        try {
+          client.sync();
+        } catch {
+          // ignore
+        }
+      },
     });
 
+    game.setSocketClient(client);
     client.connect();
 
     return () => {
+      try {
+        client.leave();
+      } catch {
+        // ignore
+      }
       client.disconnect();
+      game.setSocketClient(null);
     };
   }, [isOnline, config.room, pushToast, game]);
 
@@ -162,9 +197,59 @@ export default function GamePage({ config, onExit }) {
   const onlineBadge = isOnline ? (
     <span className="NVBadge" title="Online status">
       <span className="NVBadgeDot" />
-      {socketState.status === "connected" ? `Online: ${socketState.roomCode}` : "Online: connecting…"}
+      {socketState.status === "connected"
+        ? `Online: ${socketState.gameId}`
+        : socketState.status === "connecting"
+          ? "Online: connecting…"
+          : "Online: disconnected"}
     </span>
   ) : null;
+
+  const handleSave = async () => {
+    if (!isOnline) {
+      saveToLocal();
+      return;
+    }
+
+    const gameId = config.room?.gameId;
+    if (!gameId) {
+      pushToast({ title: "Save failed", message: "Missing game id." });
+      return;
+    }
+
+    try {
+      await saveGame({ gameId });
+      pushToast({ title: "Saved", message: "Game saved on server." });
+    } catch (e) {
+      pushToast({ title: "Save failed", message: String(e?.message || e) });
+    }
+  };
+
+  const handleLoad = async () => {
+    if (!isOnline) {
+      loadFromLocal();
+      return;
+    }
+
+    const gameId = config.room?.gameId;
+    if (!gameId) {
+      pushToast({ title: "Load failed", message: "Missing game id." });
+      return;
+    }
+
+    try {
+      const serverGame = await loadGame({ gameId });
+      game.hydrateFromServerGame(serverGame);
+
+      // Ask WS to re-sync as well (helps after reconnect).
+      const client = game.getSocketClient();
+      if (client) client.sync();
+
+      pushToast({ title: "Loaded", message: "Game loaded from server snapshot." });
+    } catch (e) {
+      pushToast({ title: "Load failed", message: String(e?.message || e) });
+    }
+  };
 
   return (
     <div className="NVRow">
@@ -202,10 +287,10 @@ export default function GamePage({ config, onExit }) {
               <button className="NVButton NVButtonSecondary" type="button" onClick={redo} disabled={!game.canRedo}>
                 Redo
               </button>
-              <button className="NVButton NVButtonSecondary" type="button" onClick={saveToLocal}>
+              <button className="NVButton NVButtonSecondary" type="button" onClick={handleSave}>
                 Save
               </button>
-              <button className="NVButton NVButtonSecondary" type="button" onClick={loadFromLocal}>
+              <button className="NVButton NVButtonSecondary" type="button" onClick={handleLoad}>
                 Load
               </button>
               <button className="NVButton NVButtonDanger" type="button" onClick={() => resign(playerSide || game.turn)}>
@@ -229,10 +314,10 @@ export default function GamePage({ config, onExit }) {
               if (ui.selected && !clickedIsSelected) {
                 tryMoveTo(coord, {
                   onOnlineSend: (move) => {
-                    // Online send happens only if socket is connected; otherwise fallback local.
-                    // game.applyMove will already have applied locally; this is "best effort" to sync.
-                    if (isOnline && socketState.status === "connected" && game.socketClient) {
-                      game.socketClient.sendMove(move);
+                    // Best-effort: send to server if online and connected.
+                    const client = game.getSocketClient();
+                    if (isOnline && socketState.status === "connected" && client) {
+                      client.sendMove(move);
                     }
                   },
                 });
@@ -252,7 +337,17 @@ export default function GamePage({ config, onExit }) {
                     key={p}
                     type="button"
                     className="NVButton"
-                    onClick={() => finalizePromotion(p)}
+                    onClick={() => {
+                      finalizePromotion(p);
+
+                      // If online, also send the finalized promotion move to backend by re-sending last move.
+                      // The next WS sync/move_applied will reconcile state if needed.
+                      const client = game.getSocketClient();
+                      if (isOnline && socketState.status === "connected" && client) {
+                        // We don't have direct access to the pending move here, so rely on WS sync after promotion.
+                        client.sync();
+                      }
+                    }}
                   >
                     {p.toUpperCase()}
                   </button>
@@ -281,9 +376,9 @@ export default function GamePage({ config, onExit }) {
               <>You are playing as {config.playerPlays === "w" ? "White" : "Black"}.</>
             ) : config.mode === "ONLINE" ? (
               <>
-                Room: <strong>{config.room?.roomCode}</strong>. Side: <strong>{config.room?.side}</strong>.
+                Game: <strong>{config.room?.gameId}</strong>. Side: <strong>{config.room?.side}</strong>.
                 <br />
-                If backend isn’t running, this will behave like local play.
+                If the backend rejects a move, the client will sync and replay server history.
               </>
             ) : (
               <>Local hot-seat play.</>

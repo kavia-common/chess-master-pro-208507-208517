@@ -9,17 +9,24 @@ export function getApiBaseUrl() {
   return `${protocol}//${hostname}:3001`;
 }
 
+function ensureWsPath(url) {
+  const u = String(url || "").trim();
+  if (!u) return "";
+  if (/\/ws\/?$/.test(u)) return u.replace(/\/$/, "");
+  return `${u.replace(/\/$/, "")}/ws`;
+}
+
 // PUBLIC_INTERFACE
 export function getWsUrl() {
   const env = process.env.REACT_APP_WS_URL;
-  if (env && env.trim()) return env.trim();
+  if (env && env.trim()) return ensureWsPath(env.trim());
 
   // If not set, derive from API base.
   const api = getApiBaseUrl();
   if (!api) return "";
   const wsProto = api.startsWith("https") ? "wss" : "ws";
   const rest = api.replace(/^https?:\/\//, "");
-  return `${wsProto}://${rest}`;
+  return ensureWsPath(`${wsProto}://${rest}`);
 }
 
 // PUBLIC_INTERFACE

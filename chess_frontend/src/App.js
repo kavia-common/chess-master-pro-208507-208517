@@ -33,7 +33,9 @@ function App() {
     playerPlays: "w", // for AI mode: 'w' or 'b'
     initialMinutes: 5,
     incrementSeconds: 0,
-    room: null, // for ONLINE mode: { roomCode, side }
+    room: null,
+    // ONLINE mode room shape:
+    // { gameId, playerId, playerName, side }
   });
 
   const appClassName = useMemo(() => {
@@ -54,14 +56,14 @@ function App() {
 
   const openOnline = () => setScreen(SCREENS.ONLINE);
 
-  const onEnterRoom = ({ roomCode, side, initialMinutes, incrementSeconds }) => {
+  const onEnterRoom = ({ gameId, playerId, playerName, side, initialMinutes, incrementSeconds }) => {
     setGameConfig({
       mode: "ONLINE",
       aiDepth: 0,
       playerPlays: side,
       initialMinutes,
       incrementSeconds,
-      room: { roomCode, side },
+      room: { gameId, playerId, playerName, side },
     });
     setScreen(SCREENS.GAME);
   };
@@ -78,17 +80,11 @@ function App() {
         />
 
         <main className="Main">
-          {screen === SCREENS.HOME && (
-            <HomePage onStartGame={startGame} onGoOnline={openOnline} />
-          )}
+          {screen === SCREENS.HOME && <HomePage onStartGame={startGame} onGoOnline={openOnline} />}
 
-          {screen === SCREENS.ONLINE && (
-            <OnlinePage onBack={goHome} onEnterRoom={onEnterRoom} />
-          )}
+          {screen === SCREENS.ONLINE && <OnlinePage onBack={goHome} onEnterRoom={onEnterRoom} />}
 
-          {screen === SCREENS.GAME && (
-            <GamePage config={gameConfig} onExit={goHome} />
-          )}
+          {screen === SCREENS.GAME && <GamePage config={gameConfig} onExit={goHome} />}
         </main>
 
         <Footer />

@@ -6,7 +6,7 @@ import {
   getStatus,
   normalizeMoveForTransport,
 } from "../chess/engine";
-import { coordToSquare } from "../chess/coords";
+import { coordToSquare, squareToCoord } from "../chess/coords";
 import { useToast } from "./useToast";
 
 const LOCAL_SAVE_KEY = "nvchess.save.v1";
@@ -21,6 +21,77 @@ function msFromMinutes(min) {
 
 function msFromSeconds(sec) {
   return Math.max(0, Number(sec) || 0) * 1000;
+}
+
+function inferCapture(stateBefore, move) {
+  // Best-effort capture detection for better move list UX.
+  // En passant: pawn moves diagonally to an empty square.
+  try {
+    const fromPiece = stateBefore.board?.[move.from.r]?.[move.from.c];
+    const toPiece = stateBefore.board?.[move.to.r]?.[move.to.c];
+
+    if (toPiece) return toPiece;
+
+    const isPawn = fromPiece && fromPiece.type === "p";
+    const movedDiagonally = move.from.c !== move.to.c;
+    if (isPawn && movedDiagonally && !toPiece) {
+      return { type: "p", color: fromPiece.color === "w" ? "b" : "w" };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function buildPresentFromBackendHistory(backendHistory, { initialMinutes, incrementSeconds }) {
+  const initState = createInitialState();
+  const clocks = {
+    w: msFromMinutes(initialMinutes),
+    b: msFromMinutes(initialMinutes),
+    inc: msFromSeconds(incrementSeconds),
+  };
+
+  let state = initState;
+  const moves = [];
+  let lastMove = null;
+
+  const history = Array.isArray(backendHistory) ? backendHistory : [];
+  for (const m of history) {
+    const from = squareToCoord(m?.from);
+    const to = squareToCoord(m?.to);
+    if (!from || !to) continue;
+
+    const candidate = { from, to, promotion: m?.promotion ? String(m.promotion).toLowerCase() : null };
+    const capture = inferCapture(state, candidate);
+
+    const result = makeMove(state, candidate);
+    if (!result.ok || result.promotionRequired) {
+      // If backend history cannot be replayed, stop hydration rather than corrupt UI state.
+      break;
+    }
+
+    const nextState = result.state;
+    const nextStatus = getStatus(nextState);
+
+    moves.push({
+      ...candidate,
+      id: nowMoveId(),
+      capture: capture || null,
+      meta: { remote: true, statusNote: nextStatus.note },
+    });
+
+    lastMove = { from, to };
+    state = nextState;
+  }
+
+  return {
+    state,
+    moves,
+    lastMove,
+    clocks,
+    clockRunning: true,
+    status: getStatus(state),
+  };
 }
 
 // PUBLIC_INTERFACE
@@ -56,6 +127,7 @@ export function useChessGame({ mode, initialMinutes, incrementSeconds }) {
     promotionPending: false,
   });
 
+  // For online mode: allow attaching the WS client for "best-effort" send/sync from UI.
   const socketClientRef = useRef(null);
 
   const present = history.present;
@@ -239,6 +311,7 @@ export function useChessGame({ mode, initialMinutes, incrementSeconds }) {
         return;
       }
 
+      // Apply locally (optimistic). If online backend rejects, caller can sync and hydrate.
       applyMoveInternal(chosen);
 
       // best-effort callback for online sync
@@ -369,6 +442,37 @@ export function useChessGame({ mode, initialMinutes, incrementSeconds }) {
     });
   }, []);
 
+  const setSocketClient = useCallback((client) => {
+    socketClientRef.current = client || null;
+  }, []);
+
+  const getSocketClient = useCallback(() => {
+    return socketClientRef.current;
+  }, []);
+
+  const hydrateFromServerGame = useCallback(
+    (serverGame) => {
+      try {
+        const nextPresent = buildPresentFromBackendHistory(serverGame?.history, {
+          initialMinutes,
+          incrementSeconds,
+        });
+
+        setHistory({
+          past: [],
+          present: nextPresent,
+          future: [],
+          promotionPending: null,
+        });
+
+        setUi({ selected: null, hover: null, legalMoves: [], promotionPending: false });
+      } catch (e) {
+        pushToast({ title: "Sync failed", message: String(e?.message || e) });
+      }
+    },
+    [initialMinutes, incrementSeconds, pushToast]
+  );
+
   const gameFacade = useMemo(() => {
     const status = present.status;
     const turn = present.state.turn;
@@ -385,12 +489,26 @@ export function useChessGame({ mode, initialMinutes, incrementSeconds }) {
       status,
       clockRunning: present.clockRunning,
 
-      socketClient: socketClientRef.current,
+      // PUBLIC_INTERFACE
+      setSocketClient,
+      // PUBLIC_INTERFACE
+      getSocketClient,
+      // PUBLIC_INTERFACE
+      hydrateFromServerGame,
 
       applyMove: (move, meta) => applyMoveInternal(move, meta),
       tick,
     };
-  }, [present, history.past.length, history.future.length, applyMoveInternal, tick]);
+  }, [
+    present,
+    history.past.length,
+    history.future.length,
+    applyMoveInternal,
+    tick,
+    setSocketClient,
+    getSocketClient,
+    hydrateFromServerGame,
+  ]);
 
   return {
     game: gameFacade,
