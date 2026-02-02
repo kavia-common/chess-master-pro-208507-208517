@@ -1,104 +1,553 @@
-/* CSS Variables for Theme Management */
+/* Neon Violet Retro Theme (plain CSS only) */
 :root {
-  /* Light theme colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --text-primary: #282c34;
-  --text-secondary: #61dafb;
-  --border-color: #e9ecef;
-  --button-bg: #007bff;
-  --button-text: #ffffff;
+  --nv-violet: #7c3aed;
+  --nv-cyan: #06b6d4;
+  --nv-green: #22c55e;
+  --nv-red: #ef4444;
+
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --text: #111827;
+  --muted: rgba(17, 24, 39, 0.7);
+  --border: rgba(17, 24, 39, 0.12);
+
+  --shadow: 0 18px 45px rgba(17, 24, 39, 0.12);
+  --focus: 0 0 0 3px rgba(124, 58, 237, 0.25);
+
+  --square-light: #efeafc;
+  --square-dark: #bda3ff;
+  --square-hover: rgba(6, 182, 212, 0.25);
+  --square-select: rgba(124, 58, 237, 0.35);
+  --square-move: rgba(34, 197, 94, 0.3);
+  --square-capture: rgba(239, 68, 68, 0.3);
+
+  --font-ui: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-retro: "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
-[data-theme="dark"] {
-  /* Dark theme colors */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #282c34;
-  --text-primary: #ffffff;
-  --text-secondary: #61dafb;
-  --border-color: #404040;
-  --button-bg: #0056b3;
-  --button-text: #ffffff;
+.theme-dark {
+  --bg: #070a12;
+  --surface: #0b1020;
+  --surface-2: #0f1630;
+  --text: #e5e7eb;
+  --muted: rgba(229, 231, 235, 0.72);
+  --border: rgba(229, 231, 235, 0.14);
+
+  --shadow: 0 24px 65px rgba(0, 0, 0, 0.45);
+
+  --square-light: #171b33;
+  --square-dark: #2a1b55;
+  --square-hover: rgba(6, 182, 212, 0.22);
+  --square-select: rgba(124, 58, 237, 0.28);
+  --square-move: rgba(34, 197, 94, 0.22);
+  --square-capture: rgba(239, 68, 68, 0.22);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .App {
-  text-align: center;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  color: var(--text);
+  font-family: var(--font-ui);
+  background:
+    radial-gradient(1200px 800px at 12% 10%, rgba(124, 58, 237, 0.18), transparent 55%),
+    radial-gradient(900px 680px at 92% 18%, rgba(6, 182, 212, 0.14), transparent 56%),
+    radial-gradient(800px 620px at 50% 90%, rgba(34, 197, 94, 0.12), transparent 58%),
+    linear-gradient(180deg, var(--bg), var(--bg));
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.Main {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+.NVCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.NVCardHeader {
+  padding: 16px 16px 0;
+}
+
+.NVCardBody {
+  padding: 16px;
+}
+
+.NVTitle {
+  font-family: var(--font-retro);
+  letter-spacing: -0.8px;
+  line-height: 1.15;
+  margin: 0;
+  font-size: 18px;
+}
+
+.NVSubtitle {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.NVRow {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .NVRow {
+    grid-template-columns: 1fr;
   }
 }
 
-.App-header {
-  background-color: var(--bg-secondary);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: var(--text-primary);
-  transition: background-color 0.3s ease;
-  position: relative;
+.NVGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.App-link {
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
+@media (max-width: 720px) {
+  .NVGrid2 {
+    grid-template-columns: 1fr;
+  }
 }
 
-.theme-toggle {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background-color: var(--button-bg);
-  color: var(--button-text);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
+.NVLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+.NVInput,
+.NVSelect {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
   font-size: 14px;
-  font-weight: 600;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 120ms ease;
+}
+
+.NVInput:focus,
+.NVSelect:focus {
+  border-color: rgba(124, 58, 237, 0.55);
+  box-shadow: var(--focus);
+}
+
+.NVButton {
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(6, 182, 212, 0.85));
+  color: white;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 14px 32px rgba(124, 58, 237, 0.22);
 }
 
-.theme-toggle:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  opacity: 0.9;
+.NVButton:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 16px 36px rgba(124, 58, 237, 0.26);
 }
 
-.theme-toggle:active {
+.NVButton:active {
   transform: translateY(0);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+.NVButtonSecondary {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.NVButtonSecondary:hover {
+  filter: brightness(1.03);
+  box-shadow: none;
+}
+
+.NVButtonDanger {
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.92), rgba(124, 58, 237, 0.7));
+  box-shadow: 0 14px 32px rgba(239, 68, 68, 0.18);
+}
+
+.NVButtonRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.NVBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.NVBadgeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--nv-cyan);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+}
+
+.NVSplit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.NVHr {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+/* Header / Footer */
+.Header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.theme-dark .Header {
+  background: rgba(7, 10, 18, 0.65);
+}
+
+.HeaderInner {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.Brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.BrandTitle {
+  margin: 0;
+  font-family: var(--font-retro);
+  font-size: 14px;
+  letter-spacing: -0.6px;
+}
+
+.BrandTagline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.HeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.Footer {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 0 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Chess board */
+.BoardWrap {
+  padding: 16px;
+}
+
+.BoardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.BoardMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.Board {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.14);
+}
+
+.Square {
+  display: grid;
+  place-items: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 110ms ease, filter 110ms ease;
+}
+
+.Square:hover {
+  filter: brightness(1.02);
+}
+
+.SquareLight {
+  background: var(--square-light);
+}
+
+.SquareDark {
+  background: var(--square-dark);
+}
+
+.SquareSelected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--square-select);
+}
+
+.SquareHintMove::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--square-move);
+}
+
+.SquareHintCapture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--square-capture);
+}
+
+.SquareHover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--square-hover);
+}
+
+.SquareCoord {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font-size: 10px;
+  color: rgba(17, 24, 39, 0.45);
+  font-family: var(--font-retro);
+  letter-spacing: -0.8px;
+}
+
+.theme-dark .SquareCoord {
+  color: rgba(229, 231, 235, 0.4);
+}
+
+.PieceSvg {
+  width: 80%;
+  height: 80%;
+  z-index: 1;
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.18));
+  transition: transform 120ms ease;
+}
+
+.Square:active .PieceSvg {
+  transform: scale(0.98);
+}
+
+.PieceText {
+  font-family: var(--font-retro);
+  font-size: 40px;
+}
+
+@media (max-width: 520px) {
+  .PieceText {
+    font-size: 32px;
   }
 }
 
-/* Responsive design for mobile */
-@media (max-width: 768px) {
-  .theme-toggle {
-    top: 10px;
-    right: 10px;
-    padding: 8px 16px;
-    font-size: 12px;
-  }
+/* Sidebar */
+.Sidebar {
+  padding: 16px;
+}
+
+.SidebarSectionTitle {
+  margin: 0 0 10px;
+  font-family: var(--font-retro);
+  font-size: 12px;
+}
+
+.MoveList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 14px;
+}
+
+.MoveItem {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.MoveItem:last-child {
+  border-bottom: none;
+}
+
+.MoveIndex {
+  color: var(--muted);
+  font-family: var(--font-retro);
+  font-size: 10px;
+  align-self: center;
+}
+
+.MoveText {
+  font-variant-numeric: tabular-nums;
+}
+
+.ClockRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ClockCard {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+}
+
+.ClockName {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.ClockTime {
+  margin: 0;
+  font-family: var(--font-retro);
+  font-size: 14px;
+  letter-spacing: -0.6px;
+}
+
+.ClockActive {
+  border-color: rgba(6, 182, 212, 0.55);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.16);
+}
+
+.StatusBanner {
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(6, 182, 212, 0.08));
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* Modal + Toast */
+.ModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 100;
+}
+
+.ModalPanel {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.ModalHeader {
+  padding: 16px 16px 0;
+}
+
+.ModalBody {
+  padding: 16px;
+}
+
+.ToastHost {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: grid;
+  gap: 10px;
+  z-index: 200;
+}
+
+.Toast {
+  width: min(360px, calc(100vw - 36px));
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 6px;
+}
+
+.ToastTitle {
+  font-family: var(--font-retro);
+  font-size: 11px;
+  margin: 0;
+}
+
+.ToastText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
 }

@@ -1,48 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useMemo, useState } from "react";
+import "./App.css";
+
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import HomePage from "./pages/HomePage";
+import GamePage from "./pages/GamePage";
+import OnlinePage from "./pages/OnlinePage";
+import { ToastProvider } from "./hooks/useToast";
+import { useLocalStorageState } from "./hooks/useLocalStorageState";
+
+/**
+ * Application screens for lightweight navigation without adding a router dependency.
+ */
+const SCREENS = Object.freeze({
+  HOME: "HOME",
+  GAME: "GAME",
+  ONLINE: "ONLINE",
+});
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  /** Persist theme locally for a consistent retro experience. */
+  const [theme, setTheme] = useLocalStorageState("nvchess.theme", "light");
 
-  // Effect to apply theme to document element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+  /** Which top-level screen is currently visible. */
+  const [screen, setScreen] = useState(SCREENS.HOME);
+
+  /** Game configuration for the active game screen. */
+  const [gameConfig, setGameConfig] = useState({
+    mode: "LOCAL", // LOCAL | AI | ONLINE
+    aiDepth: 2,
+    playerPlays: "w", // for AI mode: 'w' or 'b'
+    initialMinutes: 5,
+    incrementSeconds: 0,
+    room: null, // for ONLINE mode: { roomCode, side }
+  });
+
+  const appClassName = useMemo(() => {
+    return `App theme-${theme}`;
   }, [theme]);
 
   // PUBLIC_INTERFACE
   const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
+
+  const goHome = () => setScreen(SCREENS.HOME);
+
+  const startGame = (nextConfig) => {
+    setGameConfig(nextConfig);
+    setScreen(SCREENS.GAME);
+  };
+
+  const openOnline = () => setScreen(SCREENS.ONLINE);
+
+  const onEnterRoom = ({ roomCode, side, initialMinutes, incrementSeconds }) => {
+    setGameConfig({
+      mode: "ONLINE",
+      aiDepth: 0,
+      playerPlays: side,
+      initialMinutes,
+      incrementSeconds,
+      room: { roomCode, side },
+    });
+    setScreen(SCREENS.GAME);
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ToastProvider>
+      <div className={appClassName}>
+        <Header
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          canGoBack={screen !== SCREENS.HOME}
+          onBack={goHome}
+          onGoOnline={openOnline}
+        />
+
+        <main className="Main">
+          {screen === SCREENS.HOME && (
+            <HomePage onStartGame={startGame} onGoOnline={openOnline} />
+          )}
+
+          {screen === SCREENS.ONLINE && (
+            <OnlinePage onBack={goHome} onEnterRoom={onEnterRoom} />
+          )}
+
+          {screen === SCREENS.GAME && (
+            <GamePage config={gameConfig} onExit={goHome} />
+          )}
+        </main>
+
+        <Footer />
+      </div>
+    </ToastProvider>
   );
 }
 
